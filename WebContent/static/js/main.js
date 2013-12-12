@@ -14,8 +14,6 @@ var from, to;
 
 function log(text)
 {
-  java('log', text);
-
   // thanks IE
   if (typeof (console) != "undefined")
     console.log(text);
@@ -23,12 +21,6 @@ function log(text)
 
 function initialize()
 {
-  // stop errors
-  if (typeof (java) == "undefined")
-    java = function(a, b)
-    {
-    };
-
   var mapOptions = {
     // basic
     center : new google.maps.LatLng(-37.8, 144.95),
@@ -63,19 +55,45 @@ function initialize()
   map.controls[google.maps.ControlPosition.LEFT_BOTTOM].push(cb2.getDiv());
   map.controls[google.maps.ControlPosition.LEFT_BOTTOM].push(cb1.getDiv());
 
+  // side controls
+  $('#search').click(
+      function()
+      {
+        if ($('#from').val().length == 0 && $('#to').val().length == 0)
+        {
+          $('#from').focus();
+          return;
+        }
+        $.getJSON('api/search', { from : Number($('#from').val()),
+          to : Number($('#to').val()) }, function(data)
+        {
+          api_path_clear();
+          $.each(data, function(key, item)
+          {
+            api_path_add(item.stops);
+          });
+          if (data.length == 0)
+            alert('no results');
+          else if ($('#compare').prop('checked'))
+            api_show_top(Number($('#spin').val()));
+          else
+            api_show_one();
+        });
+      });
+
   // AJAX time
-  $.getJSON('api/stations', function(data)
+  $.getJSON('api/stops', function(data)
   {
     $.each(data, function(key, item)
     {
-      js_stop_add(item.id, item.name, item.lat, item.lng);
+      api_stop_add(item.id, item.name, item.lat, item.lng);
     });
 
     $.getJSON('api/links', function(data)
     {
       $.each(data, function(key, item)
       {
-        js_link_add(item.from, item.to);
+        api_link_add(item.from, item.to);
       });
     });
   });
@@ -83,7 +101,25 @@ function initialize()
 
 // api
 
-function js_stop_clear()
+function api_select(id)
+{
+  if ($('#from').val().length > 0 && $('#to').val().length > 0)
+  {
+    $('#from').val('');
+    $('#to').val('');
+  }
+
+  if ($('#from').val().length == 0)
+  {
+    $('#from').val(id);
+  }
+  else if ($('#to').val().length == 0)
+  {
+    $('#to').val(id);
+  }
+}
+
+function api_stop_clear()
 {
   while (l_stops.length)
   {
@@ -92,7 +128,7 @@ function js_stop_clear()
   }
 }
 
-function js_stop_add(id, name, lat, lng)
+function api_stop_add(id, name, lat, lng)
 {
   var marker = new google.maps.Marker({
     position : new google.maps.LatLng(lat, lng), map : v_stops ? map : null,
@@ -100,12 +136,12 @@ function js_stop_add(id, name, lat, lng)
   marker.id = id;
   google.maps.event.addListener(marker, 'click', function()
   {
-    java('select', id);
+    api_select(id);
   });
   l_stops.push(marker);
 }
 
-function js_link_clear()
+function api_link_clear()
 {
   while (l_links.length)
   {
@@ -114,7 +150,7 @@ function js_link_clear()
   }
 }
 
-function js_link_add(from, to)
+function api_link_add(from, to)
 {
   l_links.push(new google.maps.Polyline(
       { path : [ getStop(from).position, getStop(to).position ],
@@ -123,7 +159,7 @@ function js_link_add(from, to)
         icons : [ { icon : arrow, offset : '100%' } ], zIndex : 2 }));
 }
 
-function js_path_clear()
+function api_path_clear()
 {
   while (l_paths.length)
   {
@@ -133,7 +169,7 @@ function js_path_clear()
   ticker.disable();
 }
 
-function js_path_add(stack)
+function api_path_add(stack)
 {
   var pos = [];
   for (var k = 0; k < stack.length; k++)
@@ -144,7 +180,7 @@ function js_path_add(stack)
         icons : [ { icon : arrow, offset : '100%' } ], visible : false }));
 }
 
-function js_show_one()
+function api_show_one()
 {
   setLayer(l_paths, false);
   for (var i = 0; i < l_paths.length; i++)
@@ -153,7 +189,7 @@ function js_show_one()
   showPath(1);
 }
 
-function js_show_top(n)
+function api_show_top(n)
 {
   setLayer(l_paths, false);
   var bounds = getBounds(l_paths[0]);

@@ -4,14 +4,18 @@ import java.sql.Connection;
 import java.sql.DriverManager;
 import java.sql.PreparedStatement;
 import java.sql.ResultSet;
+import java.util.ArrayDeque;
 import java.util.ArrayList;
+import java.util.Deque;
 import java.util.HashMap;
+import java.util.Iterator;
 import java.util.Map;
 
 import org.springframework.stereotype.Controller;
 import org.springframework.ui.ModelMap;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestMethod;
+import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.ResponseBody;
 
 @Controller
@@ -56,20 +60,20 @@ public class API
     }
   }
 
-  @RequestMapping(value = "/stations", method = RequestMethod.GET)
+  @RequestMapping(value = "/stops", method = RequestMethod.GET)
   @ResponseBody
-  public ArrayList<Station> getStations(ModelMap model) throws Exception
+  public ArrayList<Stop> getStops(ModelMap model) throws Exception
   {
-    ArrayList<Station> stations = new ArrayList<Station>();
+    ArrayList<Stop> stops = new ArrayList<Stop>();
 
     ResultSet rs = s1.executeQuery();
     while (rs.next())
     {
-      stations.add(new Station(rs.getInt(1), rs.getString(2), rs.getDouble(3),
-          rs.getDouble(4)));
+      stops.add(new Stop(rs.getInt(1), rs.getString(2), rs.getDouble(3), rs
+          .getDouble(4)));
     }
 
-    return stations;
+    return stops;
   }
 
   @RequestMapping(value = "/links", method = RequestMethod.GET)
@@ -87,7 +91,55 @@ public class API
     return links;
   }
 
-  public class Station
+  @RequestMapping(value = "/search", method = RequestMethod.GET)
+  @ResponseBody
+  public ArrayList<Path> search(@RequestParam int from, @RequestParam int to,
+      ModelMap model) throws Exception
+  {
+    ArrayList<Path> paths = new ArrayList<Path>();
+
+    Deque<Integer> stack = new ArrayDeque<Integer>();
+    Map<Integer, Boolean> marked = new HashMap<Integer, Boolean>();
+    stack.push(from);
+    marked.put(from, true);
+    dfs(paths, stack, marked, to);
+
+    return paths;
+  }
+
+  private void dfs(ArrayList<Path> paths, Deque<Integer> stack,
+      Map<Integer, Boolean> marked, int to)
+  {
+    ArrayList<Integer> l = links.get(stack.peek());
+
+    for (int i = 0; i < l.size(); i++)
+    {
+      int node = l.get(i);
+
+      // skip
+      if (marked.containsKey(node) && marked.get(node))
+        continue;
+
+      // found
+      if (node == to)
+      {
+        Path path = new Path();
+        for (Iterator<Integer> j = stack.descendingIterator(); j.hasNext();)
+          path.addStop(j.next());
+        path.addStop(to);
+        paths.add(path);
+      }
+
+      // step in
+      marked.put(node, true);
+      stack.push(node);
+      dfs(paths, stack, marked, to);
+      stack.pop();
+      marked.put(node, false);
+    }
+  }
+
+  public class Stop
   {
     private int id;
     private String name;
@@ -114,7 +166,7 @@ public class API
       return name;
     }
 
-    public Station(int id, String name, double lat, double lng)
+    public Stop(int id, String name, double lat, double lng)
     {
       this.id = id;
       this.name = name;
@@ -142,6 +194,26 @@ public class API
     {
       this.from = from;
       this.to = to;
+    }
+  }
+
+  public class Path
+  {
+    private ArrayList<Integer> stops;
+
+    public ArrayList<Integer> getStops()
+    {
+      return stops;
+    }
+
+    public void addStop(int id)
+    {
+      stops.add(id);
+    }
+
+    public Path()
+    {
+      stops = new ArrayList<Integer>();
     }
   }
 }
