@@ -66,7 +66,18 @@ function initialize()
   // AJAX time
   $.getJSON('api/stations', function(data)
   {
-    console.log(data);
+    $.each(data, function(key, item)
+    {
+      js_stop_add(item.id, item.name, item.lat, item.lng);
+    });
+
+    $.getJSON('api/links', function(data)
+    {
+      $.each(data, function(key, item)
+      {
+        js_link_add(item.from, item.to);
+      });
+    });
   });
 }
 
