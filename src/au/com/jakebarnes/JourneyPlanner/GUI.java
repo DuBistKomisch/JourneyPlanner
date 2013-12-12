@@ -7,9 +7,11 @@ import org.springframework.web.bind.annotation.RequestMethod;
 
 @Controller
 @RequestMapping("/")
-public class GUI {
-	@RequestMapping(method = RequestMethod.GET)
-	public String index(ModelMap model) {
-		return "index";
-	}
+public class GUI
+{
+  @RequestMapping(method = RequestMethod.GET)
+  public String index(ModelMap model)
+  {
+    return "index";
+  }
 }
