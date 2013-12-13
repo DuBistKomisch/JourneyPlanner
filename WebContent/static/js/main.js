@@ -154,21 +154,26 @@ function initialize()
 
 // api
 
-function api_select(id)
+function api_select(id, name)
 {
-  if ($('#from').val().length > 0 && $('#to').val().length > 0)
+  if (from != -1 && to != -1)
   {
-    $('#from').val('');
-    $('#to').val('');
+    $('#from, #to').val('');
+    $('#from, #to').removeClass('valid');
+    from = to = -1;
   }
 
-  if ($('#from').val().length == 0)
+  if (from == -1)
   {
-    $('#from').val(id);
+    $('#from').val(name);
+    $('#from').addClass('valid');
+    from = id;
   }
-  else if ($('#to').val().length == 0)
+  else if (to == -1)
   {
-    $('#to').val(id);
+    $('#to').val(name);
+    $('#to').addClass('valid');
+    to = id;
   }
 }
 
@@ -190,7 +195,7 @@ function api_stop_add(id, name, lat, lng)
   marker.name = name;
   google.maps.event.addListener(marker, 'click', function()
   {
-    api_select(id);
+    api_select(id, name);
   });
   l_stops.push(marker);
 }
