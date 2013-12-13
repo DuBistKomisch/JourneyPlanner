@@ -1,5 +1,6 @@
 package au.com.jakebarnes.JourneyPlanner;
 
+import java.sql.Connection;
 import java.sql.ResultSet;
 import java.sql.Statement;
 import java.util.ArrayDeque;
@@ -37,20 +38,24 @@ public class API
     // JDBC
     dataSource = (DataSource) new InitialContext()
         .lookup("java:/comp/env/jdbc/ptvdb");
-    Statement stat = dataSource.getConnection().createStatement();
 
     // data
-    links = new HashMap<Integer, List<Integer>>();
-    ResultSet rs = stat.executeQuery(s1);
-    while (rs.next())
+    try (Connection conn = dataSource.getConnection();
+        Statement stat = conn.createStatement();)
     {
-      links.put(rs.getInt(1), new ArrayList<Integer>());
-    }
-    rs.close();
-    rs = stat.executeQuery(s2);
-    while (rs.next())
-    {
-      links.get(rs.getInt(1)).add(rs.getInt(2));
+      links = new HashMap<Integer, List<Integer>>();
+      ResultSet rs = stat.executeQuery(s1);
+      while (rs.next())
+      {
+        links.put(rs.getInt(1), new ArrayList<Integer>());
+      }
+      rs.close();
+      rs = stat.executeQuery(s2);
+      while (rs.next())
+      {
+        links.get(rs.getInt(1)).add(rs.getInt(2));
+      }
+      rs.close();
     }
   }
 
@@ -60,11 +65,14 @@ public class API
   {
     ArrayList<Stop> result = new ArrayList<Stop>();
 
-    Statement stat = dataSource.getConnection().createStatement();
-    ResultSet rs = stat.executeQuery(s1);
-    while (rs.next())
-      result.add(new Stop(rs.getInt(1), rs.getString(2), rs.getDouble(3), rs
-          .getDouble(4)));
+    try (Connection conn = dataSource.getConnection();
+        Statement stat = conn.createStatement();
+        ResultSet rs = stat.executeQuery(s1))
+    {
+      while (rs.next())
+        result.add(new Stop(rs.getInt(1), rs.getString(2), rs.getDouble(3), rs
+            .getDouble(4)));
+    }
 
     return result;
   }
