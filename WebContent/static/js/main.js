@@ -99,10 +99,7 @@ function initialize()
       } });
 
   // AJAX time
-  $.getJSON('api/stops', process_stops).fail(function(a, b, c)
-  {
-    api_status('Couldn\'t load stops.', true);
-  });
+  getJSON('api/stops', {}, process_stops, 'Couldn\t load stops.', 10);
 }
 
 $(document).ready(initialize);
@@ -116,10 +113,7 @@ function process_stops(data)
     api_stop_add(item.id, item.name, item.lat, item.lng);
   });
 
-  $.getJSON('api/links', process_links).fail(function(a, b, c)
-  {
-    api_status('Couldn\'t load links.', true);
-  });
+  getJSON('api/links', {}, process_links, 'Couldn\t load links.', 10);
 }
 
 function process_links(data)
@@ -144,11 +138,8 @@ function search()
   }
 
   $('#search').button("option", "disabled", true);
-  $.getJSON('api/search', { from : from, to : to }, process_results).fail(
-      function(a, b, c)
-      {
-        api_status('Couldn\'t load results.', true);
-      }).done(function(a, b, c)
+  getJSON('api/search', { from : from, to : to }, process_results,
+      'Couldn\t load results.', 10).done(function(a, b, c)
   {
     $('#from, #to, #search').each(function(item)
     {
@@ -320,6 +311,16 @@ function api_show_top(n)
 }
 
 // util
+
+function getJSON(url, params, success, errorMessage, timeout)
+{
+  return $.ajax(
+      { url : url, data : params, dataType : 'json', success : success,
+        timeout : timeout * 1000 }).fail(function(a, b, c)
+  {
+    api_status(errorMessage, true);
+  });
+}
 
 function getStop(id)
 {
