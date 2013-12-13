@@ -12,13 +12,7 @@ var colors = [ { strokeColor : '#40B040' }, { strokeColor : '#0040F0' },
 var ticker;
 var from = -1, to = -1;
 
-function log(text)
-{
-  // thanks IE
-  if (typeof (console) != "undefined")
-    console.log(text);
-}
-
+// init
 function initialize()
 {
   var mapOptions = {
@@ -56,8 +50,11 @@ function initialize()
   map.controls[google.maps.ControlPosition.LEFT_BOTTOM].push(cb1.getDiv());
 
   // side controls
+  $('#spin').spinner({ min : 2, max : 5 });
+  $('button').button();
+  $('#search').click(search);
   $('#from').autocomplete(
-      { source : api_stop_search, select : function(event, ui)
+      { delay : 0, source : api_stop_search, select : function(event, ui)
       {
         event.preventDefault();
         $('#from').val(ui.item.label);
@@ -79,7 +76,7 @@ function initialize()
         event.preventDefault();
       } });
   $('#to').autocomplete(
-      { source : api_stop_search, select : function(event, ui)
+      { delay : 0, source : api_stop_search, select : function(event, ui)
       {
         event.preventDefault();
         $('#to').val(ui.item.label);
@@ -100,59 +97,105 @@ function initialize()
       {
         event.preventDefault();
       } });
-  $('#spin').spinner({ min : 2, max : 5 });
-  $('button').button();
-  $('#search').click(function()
-  {
-    log(from + ' -> ' + to);
-    if (from == -1)
-    {
-      $('#from').focus();
-      return;
-    }
-    if (to == -1)
-    {
-      $('#to').focus();
-      return;
-    }
-    $.getJSON('api/search', { from : from, to : to }, function(data)
-    {
-      api_path_clear();
-      $.each(data, function(key, item)
-      {
-        api_path_add(item.stops);
-      });
-      if (data.length == 0)
-        alert('no results');
-      else if ($('#compare').prop('checked'))
-        api_show_top($('#spin').spinner("value"));
-      else
-        api_show_one();
-    });
-  });
 
   // AJAX time
-  $.getJSON('api/stops', function(data)
+  $.getJSON('api/stops', process_stops).fail(function(a, b, c)
   {
-    $.each(data, function(key, item)
-    {
-      api_stop_add(item.id, item.name, item.lat, item.lng);
-    });
-
-    $.getJSON('api/links', function(data)
-    {
-      $.each(data, function(key, item)
-      {
-        api_link_add(item.from, item.to);
-      });
-    });
-  }).fail(function(a, b, c)
-  {
-    alert("stops failed to load");
+    api_status('Couldn\'t load stops.', true);
   });
 }
 
+$(document).ready(initialize);
+
+// callbacks
+
+function process_stops(data)
+{
+  $.each(data, function(key, item)
+  {
+    api_stop_add(item.id, item.name, item.lat, item.lng);
+  });
+
+  $.getJSON('api/links', process_links).fail(function(a, b, c)
+  {
+    api_status('Couldn\'t load links.', true);
+  });
+}
+
+function process_links(data)
+{
+  $.each(data, function(key, item)
+  {
+    api_link_add(item.from, item.to);
+  });
+}
+
+function search()
+{
+  if (from == -1)
+  {
+    $('#from').focus();
+    return;
+  }
+  if (to == -1)
+  {
+    $('#to').focus();
+    return;
+  }
+
+  $('#search').button("option", "disabled", true);
+  $.getJSON('api/search', { from : from, to : to }, process_results).fail(
+      function(a, b, c)
+      {
+        api_status('Couldn\'t load results.', true);
+      }).done(function(a, b, c)
+  {
+    $('#from, #to, #search').each(function(item)
+    {
+      $('#search').button("option", "disabled", false);
+    });
+  });
+}
+
+function process_results(data)
+{
+  api_path_clear();
+  $.each(data, function(key, item)
+  {
+    api_path_add(item.stops);
+  });
+  if (data.length == 0)
+    api_status('No results found.', false);
+  else if ($('#compare').prop('checked'))
+    api_show_top($('#spin').spinner('value'));
+  else
+    api_show_one();
+}
+
 // api
+
+function api_log(text)
+{
+  // thanks IE
+  if (typeof (console) != 'undefined')
+    console.log(text);
+}
+
+function api_status(text, error)
+{
+  $('#status').removeClass('ui-state-error ui-state-highlight');
+  $('#status').addClass(error ? 'ui-state-error' : 'ui-state-highlight');
+  if (typeof (text) == 'undefined')
+  {
+    $('#status').text('');
+    $('#status').hide();
+  }
+  else
+  {
+    $('#status').text(text);
+    $('#status').show();
+  }
+}
 
 function api_select(id, name)
 {
@@ -206,7 +249,11 @@ function api_stop_search(part, cb)
   var l_results = [];
   for (var i = 0; i < l_stops.length; i++)
     if (l_stops[i].name.toLowerCase().indexOf(needle) > -1)
+    {
       l_results.push({ label : l_stops[i].name, value : l_stops[i].id });
+      if (l_results.length == 10)
+        break;
+    }
   cb(l_results);
 }
 
@@ -314,6 +361,3 @@ function setLayer(layer, show)
   for (var i = 0; i < layer.length; i++)
     layer[i].setVisible(show);
 }
-
-// init
-$(document).ready(initialize);

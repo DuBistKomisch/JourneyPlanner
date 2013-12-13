@@ -24,6 +24,7 @@
   <body>
     <div id="map-canvas"></div>
     <div id="side">
+      <p id="status" class="ui-state-error ui-corner-all">Test error</p>
       <p><input type="text" id="from" placeholder="From" /></p>
       <p><input type="text" id="to" placeholder="To" /></p>
       <p>

@@ -59,7 +59,8 @@ html > body > div:nth-of-type(1) > div:nth-of-type(1) > div:nth-of-type(10)
 #from,
 #to
 {
-  width: 186px;
+  width: 100%;
+  box-sizing: border-box;
 }
 
 #spin
@@ -89,13 +90,21 @@ html > body > div:nth-of-type(1) > div:nth-of-type(1) > div:nth-of-type(10)
   vertical-align: middle;
 }
 
+#status
+{
+  padding: 4px;
+  display: none;
+}
+
 #from,
 #to
 {
   background: #FFE0E0;
+  border: 2px inset #FFE0E0;
 }
 #from.valid,
 #to.valid
 {
   background: #E0FFE0;
+  border: 2px inset #E0FFE0;
 }
