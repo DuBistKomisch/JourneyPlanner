@@ -102,6 +102,8 @@ public class API
       Map<Integer, Boolean> marked, int to)
   {
     List<Integer> l = links.get(stack.peek());
+    if (l == null)
+      return;
 
     for (int i = 0; i < l.size(); i++)
     {
