@@ -10,7 +10,7 @@ var colors = [ { strokeColor : '#40B040' }, { strokeColor : '#0040F0' },
 
 // planning
 var ticker;
-var from, to;
+var from = -1, to = -1;
 
 function log(text)
 {
@@ -56,30 +56,80 @@ function initialize()
   map.controls[google.maps.ControlPosition.LEFT_BOTTOM].push(cb1.getDiv());
 
   // side controls
-  $('#search').click(
-      function()
+  $('#from').autocomplete(
+      { source : api_stop_search, select : function(event, ui)
       {
-        if ($('#from').val().length == 0 && $('#to').val().length == 0)
+        event.preventDefault();
+        $('#from').val(ui.item.label);
+        $('#from').addClass('valid');
+        from = ui.item.value;
+      }, search : function(event, ui)
+      {
+        $('#from').removeClass('valid');
+        from = -1;
+      }, change : function(event, ui)
+      {
+        if (ui.item = null)
         {
-          $('#from').focus();
-          return;
+          $('#from').removeClass('valid');
+          from = -1;
         }
-        $.getJSON('api/search', { from : Number($('#from').val()),
-          to : Number($('#to').val()) }, function(data)
+      }, focus : function(event, ui)
+      {
+        event.preventDefault();
+      } });
+  $('#to').autocomplete(
+      { source : api_stop_search, select : function(event, ui)
+      {
+        event.preventDefault();
+        $('#to').val(ui.item.label);
+        $('#to').addClass('valid');
+        to = ui.item.value;
+      }, search : function(event, ui)
+      {
+        $('#to').removeClass('valid');
+        to = -1;
+      }, change : function(event, ui)
+      {
+        if (ui.item = null)
         {
-          api_path_clear();
-          $.each(data, function(key, item)
-          {
-            api_path_add(item.stops);
-          });
-          if (data.length == 0)
-            alert('no results');
-          else if ($('#compare').prop('checked'))
-            api_show_top(Number($('#spin').val()));
-          else
-            api_show_one();
-        });
+          $('#to').removeClass('valid');
+          to = -1;
+        }
+      }, focus : function(event, ui)
+      {
+        event.preventDefault();
+      } });
+  $('#spin').spinner({ min : 2, max : 5 });
+  $('button').button();
+  $('#search').click(function()
+  {
+    log(from + ' -> ' + to);
+    if (from == -1)
+    {
+      $('#from').focus();
+      return;
+    }
+    if (to == -1)
+    {
+      $('#to').focus();
+      return;
+    }
+    $.getJSON('api/search', { from : from, to : to }, function(data)
+    {
+      api_path_clear();
+      $.each(data, function(key, item)
+      {
+        api_path_add(item.stops);
       });
+      if (data.length == 0)
+        alert('no results');
+      else if ($('#compare').prop('checked'))
+        api_show_top($('#spin').spinner("value"));
+      else
+        api_show_one();
+    });
+  });
 
   // AJAX time
   $.getJSON('api/stops', function(data)
@@ -96,6 +146,9 @@ function initialize()
         api_link_add(item.from, item.to);
       });
     });
+  }).fail(function(a, b, c)
+  {
+    alert("stops failed to load");
   });
 }
 
@@ -134,11 +187,22 @@ function api_stop_add(id, name, lat, lng)
     position : new google.maps.LatLng(lat, lng), map : v_stops ? map : null,
     title : name + ' (' + id + ')', icon : icon, zIndex : 5 });
   marker.id = id;
+  marker.name = name;
   google.maps.event.addListener(marker, 'click', function()
   {
     api_select(id);
   });
   l_stops.push(marker);
+}
+
+function api_stop_search(part, cb)
+{
+  var needle = part.term.toLowerCase();
+  var l_results = [];
+  for (var i = 0; i < l_stops.length; i++)
+    if (l_stops[i].name.toLowerCase().indexOf(needle) > -1)
+      l_results.push({ label : l_stops[i].name, value : l_stops[i].id });
+  cb(l_results);
 }
 
 function api_link_clear()

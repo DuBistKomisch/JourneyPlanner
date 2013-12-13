@@ -8,7 +8,9 @@
     <meta name="viewport" content="initial-scale=1.0, user-scalable=no" />
     <title>Journey Planner &ndash; Jake Barnes</title>
     <!-- jQuery -->
+    <link rel="stylesheet" href="http://code.jquery.com/ui/1.10.3/themes/ui-lightness/jquery-ui.css">
     <script src="http://ajax.googleapis.com/ajax/libs/jquery/2.0.3/jquery.min.js"></script>
+    <script src="http://code.jquery.com/ui/1.10.3/jquery-ui.js"></script>
     <!-- Google Maps API -->
     <script src="https://maps.googleapis.com/maps/api/js?key=AIzaSyDX4taVnGzTRopaLtDnFwCiXv7SSPMFWXs&amp;sensor=false&amp;region=AU"></script>
     <!-- our files -->
@@ -29,7 +31,7 @@
           <input type="checkbox" id="compare" />
           Compare
         </label>
-        <input type="number" id="spin" value="3" min="2" max="5" />
+        <input type="text" id="spin" value="3" />
       </p>
       <p><button id="search">Search</button></p>
     </div>

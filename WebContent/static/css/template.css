@@ -72,6 +72,11 @@ html > body > div:nth-of-type(1) > div:nth-of-type(1) > div:nth-of-type(10)
  * ===
  */
 
+.ui-widget
+{
+  font-size: 75%;
+}
+
 #side
 {
   border-style: inset;
@@ -79,7 +84,18 @@ html > body > div:nth-of-type(1) > div:nth-of-type(1) > div:nth-of-type(10)
   background: #F0F0F0;
 }
 
-#side input
+#side label
 {
-  border: 2px inset #F0F0F0;
+  vertical-align: middle;
+}
+
+#from,
+#to
+{
+  background: #FFE0E0;
+}
+#from.valid,
+#to.valid
+{
+  background: #E0FFE0;
 }
