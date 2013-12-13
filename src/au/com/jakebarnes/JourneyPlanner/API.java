@@ -1,15 +1,17 @@
 package au.com.jakebarnes.JourneyPlanner;
 
-import java.sql.Connection;
-import java.sql.DriverManager;
-import java.sql.PreparedStatement;
 import java.sql.ResultSet;
+import java.sql.Statement;
 import java.util.ArrayDeque;
 import java.util.ArrayList;
 import java.util.Deque;
 import java.util.HashMap;
 import java.util.Iterator;
+import java.util.List;
 import java.util.Map;
+
+import javax.naming.InitialContext;
+import javax.sql.DataSource;
 
 import org.springframework.stereotype.Controller;
 import org.springframework.ui.ModelMap;
@@ -23,37 +25,29 @@ import org.springframework.web.bind.annotation.ResponseBody;
 public class API
 {
   // JDBC
-  private Connection conn;
-  private PreparedStatement s1, s2;
+  private DataSource dataSource;
+  private static final String s1 = "SELECT MetlinkStopID, StopSpecName, GPSLat, GPSLong FROM tblstopinformation WHERE StopModeID = 2";
+  private static final String s2 = "SELECT DISTINCT a.MetlinkStopID AS 'from', b.MetlinkStopID AS 'to' FROM tblstoproutes AS b JOIN (SELECT MetlinkStopID, RouteID, StopOrder FROM tblstoproutes NATURAL JOIN tblstopinformation WHERE StopModeID = 2) AS a ON a.RouteID = b.RouteID JOIN tblstopinformation AS c ON b.metlinkStopID = c.MetlinkStopID WHERE b.StopOrder = a.StopOrder+1 AND c.StopModeID = 2";
 
   // data
-  private Map<Integer, ArrayList<Integer>> links;
+  private Map<Integer, List<Integer>> links;
 
   public API() throws Exception
   {
-    final int mode = 2;
-
     // JDBC
-    Class.forName("com.mysql.jdbc.Driver");
-    conn = DriverManager.getConnection("jdbc:mysql://localhost/ptv", "jp",
-        "abc123");
-    s1 = conn
-        .prepareStatement("SELECT MetlinkStopID, StopSpecName, GPSLat, GPSLong FROM tblstopinformation WHERE StopModeID = ?");
-    s1.setInt(1, mode);
-    s2 = conn
-        .prepareStatement("SELECT DISTINCT a.MetlinkStopID AS 'from', b.MetlinkStopID AS 'to' FROM tblstoproutes AS b JOIN (SELECT MetlinkStopID, RouteID, StopOrder FROM tblstoproutes NATURAL JOIN tblstopinformation WHERE StopModeID = ?) AS a ON a.RouteID = b.RouteID JOIN tblstopinformation AS c ON b.metlinkStopID = c.MetlinkStopID WHERE b.StopOrder = a.StopOrder+1 AND c.StopModeID = ?");
-    s2.setInt(1, mode);
-    s2.setInt(2, mode);
+    dataSource = (DataSource) new InitialContext()
+        .lookup("java:/comp/env/jdbc/ptvdb");
+    Statement stat = dataSource.getConnection().createStatement();
 
     // data
-    links = new HashMap<Integer, ArrayList<Integer>>();
-    ResultSet rs = s1.executeQuery();
+    links = new HashMap<Integer, List<Integer>>();
+    ResultSet rs = stat.executeQuery(s1);
     while (rs.next())
     {
       links.put(rs.getInt(1), new ArrayList<Integer>());
     }
     rs.close();
-    rs = s2.executeQuery();
+    rs = stat.executeQuery(s2);
     while (rs.next())
     {
       links.get(rs.getInt(1)).add(rs.getInt(2));
@@ -64,39 +58,36 @@ public class API
   @ResponseBody
   public ArrayList<Stop> getStops(ModelMap model) throws Exception
   {
-    ArrayList<Stop> stops = new ArrayList<Stop>();
+    ArrayList<Stop> result = new ArrayList<Stop>();
 
-    ResultSet rs = s1.executeQuery();
+    Statement stat = dataSource.getConnection().createStatement();
+    ResultSet rs = stat.executeQuery(s1);
     while (rs.next())
-    {
-      stops.add(new Stop(rs.getInt(1), rs.getString(2), rs.getDouble(3), rs
+      result.add(new Stop(rs.getInt(1), rs.getString(2), rs.getDouble(3), rs
           .getDouble(4)));
-    }
 
-    return stops;
+    return result;
   }
 
   @RequestMapping(value = "/links", method = RequestMethod.GET)
   @ResponseBody
   public ArrayList<Link> getLinks(ModelMap model) throws Exception
   {
-    ArrayList<Link> links = new ArrayList<Link>();
+    ArrayList<Link> result = new ArrayList<Link>();
 
-    ResultSet rs = s2.executeQuery();
-    while (rs.next())
-    {
-      links.add(new Link(rs.getInt(1), rs.getInt(2)));
-    }
+    for (Map.Entry<Integer, List<Integer>> entry : links.entrySet())
+      for (Integer to : entry.getValue())
+        result.add(new Link(entry.getKey(), to));
 
-    return links;
+    return result;
   }
 
   @RequestMapping(value = "/search", method = RequestMethod.GET)
   @ResponseBody
-  public ArrayList<Path> search(@RequestParam int from, @RequestParam int to,
+  public List<Path> search(@RequestParam int from, @RequestParam int to,
       ModelMap model) throws Exception
   {
-    ArrayList<Path> paths = new ArrayList<Path>();
+    List<Path> paths = new ArrayList<Path>();
 
     Deque<Integer> stack = new ArrayDeque<Integer>();
     Map<Integer, Boolean> marked = new HashMap<Integer, Boolean>();
@@ -107,10 +98,10 @@ public class API
     return paths;
   }
 
-  private void dfs(ArrayList<Path> paths, Deque<Integer> stack,
+  private void dfs(List<Path> paths, Deque<Integer> stack,
       Map<Integer, Boolean> marked, int to)
   {
-    ArrayList<Integer> l = links.get(stack.peek());
+    List<Integer> l = links.get(stack.peek());
 
     for (int i = 0; i < l.size(); i++)
     {
