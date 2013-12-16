@@ -27,8 +27,25 @@ public class API
 {
   // JDBC
   private DataSource dataSource;
-  private static final String s1 = "SELECT MetlinkStopID, StopSpecName, GPSLat, GPSLong FROM tblstopinformation WHERE StopModeID = 2";
-  private static final String s2 = "SELECT DISTINCT a.MetlinkStopID AS 'from', b.MetlinkStopID AS 'to' FROM tblstoproutes AS b JOIN (SELECT MetlinkStopID, RouteID, StopOrder FROM tblstoproutes NATURAL JOIN tblstopinformation WHERE StopModeID = 2) AS a ON a.RouteID = b.RouteID JOIN tblstopinformation AS c ON b.metlinkStopID = c.MetlinkStopID WHERE b.StopOrder = a.StopOrder+1 AND c.StopModeID = 2";
+  /*
+   * mode 1 : bus 2 : train 3 : tram
+   */
+  // get stops
+  private static final String s1 = "SELECT MetlinkStopID, StopSpecName, GPSLat, GPSLong, StopModeID "
+      + "FROM tblstopinformation "
+      + "WHERE StopModeID = 2 OR StopModeID = 3 "
+      + "ORDER BY StopModeID";
+  // get which stops you can get to directly from each stop
+  private static final String s2 = "SELECT DISTINCT a.MetlinkStopID AS 'from', b.MetlinkStopID AS 'to' "
+      + "FROM tblstoproutes AS b "
+      + "JOIN ("
+      + "SELECT MetlinkStopID, RouteID, StopOrder "
+      + "FROM tblstoproutes "
+      + "NATURAL JOIN tblstopinformation "
+      + "WHERE StopModeID = 2 OR StopModeID = 3"
+      + ") AS a ON a.RouteID = b.RouteID "
+      + "JOIN tblstopinformation AS c ON b.metlinkStopID = c.MetlinkStopID "
+      + "WHERE b.StopOrder = a.StopOrder+1 AND (c.StopModeID = 2 OR StopModeID=3)";
 
   // data
   private Map<Integer, List<Integer>> links;
@@ -71,7 +88,7 @@ public class API
     {
       while (rs.next())
         result.add(new Stop(rs.getInt(1), rs.getString(2), rs.getDouble(3), rs
-            .getDouble(4)));
+            .getDouble(4), rs.getInt(5)));
     }
 
     return result;
@@ -146,6 +163,7 @@ public class API
     private String name;
     private double lat;
     private double lng;
+    private int mode;
 
     public int getId()
     {
@@ -167,12 +185,18 @@ public class API
       return name;
     }
 
-    public Stop(int id, String name, double lat, double lng)
+    public int getMode()
+    {
+      return mode;
+    }
+
+    public Stop(int id, String name, double lat, double lng, int mode)
     {
       this.id = id;
       this.name = name;
       this.lat = lat;
       this.lng = lng;
+      this.mode = mode;
     }
   }
 
