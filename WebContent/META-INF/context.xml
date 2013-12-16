@@ -3,5 +3,6 @@
   <!-- Specify a JDBC datasource -->
   <Resource name="jdbc/ptvdb" auth="Container" type="javax.sql.DataSource"
     username="jp" password="abc123" driverClassName="com.mysql.jdbc.Driver"
-    url="jdbc:mysql://localhost/ptv" maxActive="10" maxIdle="4" />
+    url="jdbc:mysql://localhost/ptv" maxActive="10" maxIdle="4"
+    testOnBorrow="true" validationQuery="SELECT 1" />
 </Context>

@@ -99,7 +99,7 @@ function initialize()
       } });
 
   // AJAX time
-  getJSON('api/stops', {}, process_stops, 'Couldn\t load stops.', 10);
+  getJSON('api/stops', {}, process_stops, "Couldn't load stops.", 10);
 }
 
 $(document).ready(initialize);
@@ -113,7 +113,7 @@ function process_stops(data)
     api_stop_add(item.id, item.name, item.lat, item.lng);
   });
 
-  getJSON('api/links', {}, process_links, 'Couldn\t load links.', 10);
+  getJSON('api/links', {}, process_links, "Couldn't load links.", 10);
 }
 
 function process_links(data)
@@ -139,7 +139,7 @@ function search()
 
   $('#search').button("option", "disabled", true);
   getJSON('api/search', { from : from, to : to }, process_results,
-      'Couldn\t load results.', 10).done(function(a, b, c)
+      "Couldn't load results.", 10).done(function(a, b, c)
   {
     $('#from, #to, #search').each(function(item)
     {
