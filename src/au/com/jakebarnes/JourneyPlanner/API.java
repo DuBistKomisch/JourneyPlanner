@@ -27,6 +27,9 @@ public class API
 {
   // JDBC
   private DataSource dataSource;
+
+  // constants
+  private static final int RESULTS_LIMIT = 3;
   /*
    * mode 1 : bus 2 : train 3 : tram
    */
@@ -110,7 +113,8 @@ public class API
   @RequestMapping(value = "/search", method = RequestMethod.GET)
   @ResponseBody
   public List<Path> search(@RequestParam int from, @RequestParam int to,
-      ModelMap model) throws Exception
+      @RequestParam(defaultValue = "0") int offset, ModelMap model)
+      throws Exception
   {
     List<Path> paths = new ArrayList<Path>();
 
@@ -120,7 +124,7 @@ public class API
     marked.put(from, true);
     dfs(paths, stack, marked, to);
 
-    return paths;
+    return paths.subList(offset, offset + API.RESULTS_LIMIT);
   }
 
   private void dfs(List<Path> paths, Deque<Integer> stack,
