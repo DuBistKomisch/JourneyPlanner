@@ -6,7 +6,7 @@ var icon = { path : google.maps.SymbolPath.CIRCLE, scale : 1 };
 var arrow = { path : google.maps.SymbolPath.FORWARD_OPEN_ARROW, scale : 2 };
 var linkColors = [ { strokeColor : '#40C0A0' }, { strokeColor : '#F04000' },
     { strokeColor : '#0040F0' }, { strokeColor : '#60B040' } ];
-var resultColors = [ { strokeColor : '#FFC040', strokeOpacity : 0.8 },
+var resultColors = [ { strokeColor : '#FFA500', strokeOpacity : 0.7 },
     { strokeColor : '#0040F0', strokeOpacity : 0.3 },
     { strokeColor : '#F04000', strokeOpacity : 0.4 },
     { strokeColor : '#8040C0', strokeOpacity : 0.3 },
@@ -157,9 +157,9 @@ function process_results(data)
   });
   $('#results').accordion('refresh');
   $('#results input[type="checkbox"]').click(updatePaths);
+  updatePaths();
   if (data.length == 0)
     api_status('No results found.', false);
-  // TODO autoselect
 }
 
 // api
@@ -294,7 +294,7 @@ function api_path_add(stack)
   var n = l_paths.length;
   $('#results').append(
       '<h3><label for="result' + n + '"><input type="checkbox" id="result' + n
-          + '" />Result #' + n + '</label></h3>');
+          + '" checked />Result #' + n + '</label></h3>');
   var content = $('<div></div>');
   var list = $('<ul></ul>');
   for (var k = 0; k < stack.length; k++)
@@ -332,7 +332,8 @@ function getLinkColor(from, to)
 
 function updatePaths(e)
 {
-  e.stopPropagation();
+  if (typeof (e) != 'undefined')
+    e.stopPropagation();
 
   setLayer(l_paths, false);
   var bounds = getBounds(l_paths[0]);
