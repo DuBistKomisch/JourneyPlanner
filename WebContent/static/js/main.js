@@ -2,14 +2,17 @@
 var map;
 var l_stops = [], l_links = [], l_paths = [];
 var v_stops = true, v_links = true;
-var icon = { path : google.maps.SymbolPath.CIRCLE, scale : 2 };
+var icon = { path : google.maps.SymbolPath.CIRCLE, scale : 1 };
 var arrow = { path : google.maps.SymbolPath.FORWARD_OPEN_ARROW, scale : 2 };
-var colors = [ { strokeColor : '#40B040' }, { strokeColor : '#0040F0' },
-    { strokeColor : '#F04000' }, { strokeColor : '#8040C0' },
-    { strokeColor : '#40C0A0' } ];
+var linkColors = [ { strokeColor : '#40C0A0' }, { strokeColor : '#F04000' },
+    { strokeColor : '#0040F0' }, { strokeColor : '#60B040' } ];
+var resultColors = [ { strokeColor : '#FFC040', strokeOpacity : 0.8 },
+    { strokeColor : '#0040F0', strokeOpacity : 0.3 },
+    { strokeColor : '#F04000', strokeOpacity : 0.4 },
+    { strokeColor : '#8040C0', strokeOpacity : 0.3 },
+    { strokeColor : '#40C0A0', strokeOpacity : 0.6 } ];
 
 // planning
-var ticker;
 var from = -1, to = -1;
 
 // init
@@ -33,10 +36,6 @@ function initialize()
   // create map
   map = new google.maps.Map($('#map-canvas')[0], mapOptions);
 
-  // search controls
-  ticker = new TickerControl(showPath);
-  map.controls[google.maps.ControlPosition.RIGHT_TOP].push(ticker.getDiv());
-
   // layer controls
   cb1 = new CheckboxControl('Stops', true, function(v)
   {
@@ -50,9 +49,10 @@ function initialize()
   map.controls[google.maps.ControlPosition.LEFT_BOTTOM].push(cb1.getDiv());
 
   // side controls
-  $('#spin').spinner({ min : 2, max : 5 });
   $('button').button();
   $('#search').click(search);
+  $('#results').accordion(
+      { active : false, collapsible : true, heightStyle : "content" });
   $('#from').autocomplete(
       { delay : 0, source : api_stop_search, select : function(event, ui)
       {
@@ -110,7 +110,7 @@ function process_stops(data)
 {
   $.each(data, function(key, item)
   {
-    api_stop_add(item.id, item.name, item.lat, item.lng);
+    api_stop_add(item.id, item.name, item.lat, item.lng, item.mode);
   });
 
   getJSON('api/links', {}, process_links, "Couldn't load links.", 10);
@@ -155,12 +155,11 @@ function process_results(data)
   {
     api_path_add(item.stops);
   });
+  $('#results').accordion('refresh');
+  $('#results input[type="checkbox"]').click(updatePaths);
   if (data.length == 0)
     api_status('No results found.', false);
-  else if ($('#compare').prop('checked'))
-    api_show_top($('#spin').spinner('value'));
-  else
-    api_show_one();
+  // TODO autoselect
 }
 
 // api
@@ -220,13 +219,15 @@ function api_stop_clear()
   }
 }
 
-function api_stop_add(id, name, lat, lng)
+function api_stop_add(id, name, lat, lng, mode)
 {
   var marker = new google.maps.Marker({
-    position : new google.maps.LatLng(lat, lng), map : v_stops ? map : null,
-    title : name + ' (' + id + ')', icon : icon, zIndex : 5 });
+    position : new google.maps.LatLng(lat, lng),
+    map : /* v_stops ? map : */null, title : name + ' (' + id + ')',
+    icon : icon, zIndex : 5 });
   marker.id = id;
   marker.name = name;
+  marker.mode = mode;
   google.maps.event.addListener(marker, 'click', function()
   {
     api_select(id, name);
@@ -241,7 +242,10 @@ function api_stop_search(part, cb)
   for (var i = 0; i < l_stops.length; i++)
     if (l_stops[i].name.toLowerCase().indexOf(needle) > -1)
     {
-      l_results.push({ label : l_stops[i].name, value : l_stops[i].id });
+      l_results.push({
+        label : l_stops[i].name + ' ['
+            + [ 'Walking', 'Bus', 'Train', 'Tram' ][l_stops[i].mode] + ']',
+        value : l_stops[i].id });
       if (l_results.length == 10)
         break;
     }
@@ -259,11 +263,14 @@ function api_link_clear()
 
 function api_link_add(from, to)
 {
-  l_links.push(new google.maps.Polyline(
-      { path : [ getStop(from).position, getStop(to).position ],
-        map : v_links ? map : null, strokeColor : '#ff0000',
-        strokeOpacity : 0.3, strokeWeight : 2,
-        icons : [ { icon : arrow, offset : '100%' } ], zIndex : 2 }));
+  from_ = getStop(from);
+  to_ = getStop(to);
+  var line = new google.maps.Polyline({
+    path : [ from_.position, to_.position ], map : v_links ? map : null,
+    strokeOpacity : 0.5, strokeWeight : 2,
+    /* icons : [ { icon : arrow, offset : '100%' } ], */zIndex : 4 });
+  line.setOptions(getLinkColor(from_.mode, to_.mode));
+  l_links.push(line);
 }
 
 function api_path_clear()
@@ -273,7 +280,7 @@ function api_path_clear()
     l_paths[0].setMap(null);
     l_paths.shift();
   }
-  ticker.disable();
+  $('#results').empty();
 }
 
 function api_path_add(stack)
@@ -281,33 +288,19 @@ function api_path_add(stack)
   var pos = [];
   for (var k = 0; k < stack.length; k++)
     pos.push(getStop(stack[k]).position);
-  l_paths.push(new google.maps.Polyline(
-      { path : pos, map : map, strokeColor : '#40a040', strokeOpacity : 0.75,
-        strokeWeight : 4, zIndex : 4,
-        icons : [ { icon : arrow, offset : '100%' } ], visible : false }));
-}
-
-function api_show_one()
-{
-  setLayer(l_paths, false);
-  for (var i = 0; i < l_paths.length; i++)
-    l_paths[i].setOptions(colors[0]);
-  ticker.setSize(l_paths.length);
-  showPath(1);
-}
-
-function api_show_top(n)
-{
-  setLayer(l_paths, false);
-  var bounds = getBounds(l_paths[0]);
-  for (var i = 0; i < n && i < l_paths.length; i++)
-  {
-    l_paths[i].setOptions(colors[i % colors.length]);
-    l_paths[i].setVisible(true);
-    bounds = bounds.union(getBounds(l_paths[i]));
-  }
-  map.fitBounds(bounds);
-  ticker.disable();
+  l_paths.push(new google.maps.Polyline({ path : pos, map : map,
+    strokeColor : '#40a040', strokeOpacity : 0.5, strokeWeight : 8, zIndex : 2,
+    icons : [ { icon : arrow, offset : '100%' } ], visible : false }));
+  var n = l_paths.length;
+  $('#results').append(
+      '<h3><label for="result' + n + '"><input type="checkbox" id="result' + n
+          + '" />Result #' + n + '</label></h3>');
+  var content = $('<div></div>');
+  var list = $('<ul></ul>');
+  for (var k = 0; k < stack.length; k++)
+    list.append('<li>' + getStop(stack[k]).name + '</li>');
+  content.append(list);
+  $('#results').append(content);
 }
 
 // util
@@ -327,6 +320,32 @@ function getStop(id)
   for (var i = 0; i < l_stops.length; i++)
     if (l_stops[i].id == id)
       return l_stops[i];
+}
+
+function getLinkColor(from, to)
+{
+  if (from == to)
+    return linkColors[from];
+  else
+    return linkColors[0];
+}
+
+function updatePaths(e)
+{
+  e.stopPropagation();
+
+  setLayer(l_paths, false);
+  var bounds = getBounds(l_paths[0]);
+  for (var i = 0; i < l_paths.length; i++)
+  {
+    if ($('#result' + (i + 1)).prop('checked'))
+    {
+      l_paths[i].setOptions(resultColors[i % resultColors.length]);
+      l_paths[i].setVisible(true);
+      bounds = bounds.union(getBounds(l_paths[i]));
+    }
+  }
+  map.fitBounds(bounds);
 }
 
 function showPath(n)
