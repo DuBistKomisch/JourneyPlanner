@@ -2,7 +2,8 @@
 var map;
 var l_stops = [], l_links = [], l_paths = [];
 var v_stops = true, v_links = true;
-var icon = { path : google.maps.SymbolPath.CIRCLE, scale : 1 };
+var icon = { url : "static/img/circle5.png", size : new google.maps.Size(5, 5),
+  anchor : new google.maps.Point(3, 3) };
 var arrow = { path : google.maps.SymbolPath.FORWARD_OPEN_ARROW, scale : 2 };
 var linkColors = [ { strokeColor : '#40C0A0' }, { strokeColor : '#F04000' },
     { strokeColor : '#0040F0' }, { strokeColor : '#60B040' } ];
@@ -222,9 +223,8 @@ function api_stop_clear()
 function api_stop_add(id, name, lat, lng, mode)
 {
   var marker = new google.maps.Marker({
-    position : new google.maps.LatLng(lat, lng),
-    map : /* v_stops ? map : */null, title : name + ' (' + id + ')',
-    icon : icon, zIndex : 5 });
+    position : new google.maps.LatLng(lat, lng), map : v_stops ? map : null,
+    title : name + ' (' + id + ')', icon : icon, zIndex : 5 });
   marker.id = id;
   marker.name = name;
   marker.mode = mode;
